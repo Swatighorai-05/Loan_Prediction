@@ -4,27 +4,40 @@ import webbrowser
 from predict import predict_loan
 
 
+# ==========================================================
 # Initialize session state for theme mode
+# ==========================================================
+
 if "theme" not in st.session_state:
     st.session_state["theme"] = "light"
 
 
+# ==========================================================
 # Function to toggle theme
+# ==========================================================
+
 def toggle_theme():
-    st.session_state["theme"] = (
-        "dark" if st.session_state["theme"] == "light" else "light"
-    )
+    if st.session_state["theme"] == "light":
+        st.session_state["theme"] = "dark"
+    else:
+        st.session_state["theme"] = "light"
 
 
+# ==========================================================
 # Define Styles for Light and Dark Mode
+# ==========================================================
+
 if st.session_state["theme"] == "light":
+
     bg_color = "#FFFFFF"
     text_color = "#000000"
     button_bg = "#007BFF"
     switch_bg = "#DDD"
     switch_circle = "#FFF"
     switch_icon = "🌞"
+
 else:
+
     bg_color = "#000000"
     text_color = "#FFFFFF"
     button_bg = "#1E90FF"
@@ -33,10 +46,14 @@ else:
     switch_icon = "🌙"
 
 
-# CSS
+# ==========================================================
+# Custom CSS
+# ==========================================================
+
 st.markdown(
     f"""
     <style>
+
         .stApp {{
             background-color: {bg_color};
         }}
@@ -62,19 +79,26 @@ st.markdown(
             font-size: 18px;
             width: 100%;
         }}
+
     </style>
     """,
     unsafe_allow_html=True
 )
 
 
+# ==========================================================
 # Header
+# ==========================================================
+
 col1, col2 = st.columns([6, 1])
+
 
 with col1:
     st.title("🏦 Loan Prediction App")
 
+
 with col2:
+
     toggle_state = st.checkbox(
         switch_icon,
         value=(st.session_state["theme"] == "dark")
@@ -82,9 +106,14 @@ with col2:
 
 
 if toggle_state != (st.session_state["theme"] == "dark"):
+
     toggle_theme()
     st.rerun()
 
+
+# ==========================================================
+# Main container
+# ==========================================================
 
 st.markdown(
     '<div class="container">',
@@ -97,7 +126,7 @@ st.markdown(
 
 
 # ==========================================================
-# Function for synchronized slider & text input
+# Slider + Text Input Function
 # ==========================================================
 
 def slider_with_text(
@@ -112,27 +141,39 @@ def slider_with_text(
 
     col1, col2 = st.columns([3, 1])
 
-    # Initialize value
+    # ------------------------------------------------------
+    # Initialize session state
+    # ------------------------------------------------------
+
     if key not in st.session_state:
         st.session_state[key] = min_val
 
+
     # ------------------------------------------------------
     # Slider
+    #
+    # IMPORTANT:
+    # We do NOT give the slider a manual session-state key.
+    # This prevents StreamlitWidgetAlreadyInstantiatedError.
     # ------------------------------------------------------
 
     slider_value = col1.slider(
         label,
-        min_val,
-        max_val,
+        min_value=min_val,
+        max_value=max_val,
         value=int(st.session_state[key]),
         step=step,
-        format=format_str,
-        key=f"slider_{key}"
+        format=format_str
     )
 
-    # IMPORTANT FIX:
-    # Save the current slider value into session state
-    st.session_state[key] = slider_value
+
+    # ------------------------------------------------------
+    # IMPORTANT:
+    # Save the CURRENT slider value
+    # ------------------------------------------------------
+
+    st.session_state[key] = int(slider_value)
+
 
     # ------------------------------------------------------
     # Text input
@@ -140,12 +181,12 @@ def slider_with_text(
 
     text_value = col2.text_input(
         "",
-        value=str(st.session_state[key]),
-        key=f"text_{key}"
+        value=str(st.session_state[key])
     )
 
+
     # ------------------------------------------------------
-    # Handle text input
+    # Clean text input
     # ------------------------------------------------------
 
     cleaned_value = (
@@ -155,6 +196,11 @@ def slider_with_text(
         .replace(suffix, "")
         .strip()
     )
+
+
+    # ------------------------------------------------------
+    # Handle manual text input
+    # ------------------------------------------------------
 
     try:
 
@@ -166,19 +212,23 @@ def slider_with_text(
 
                 st.session_state[key] = new_value
 
-                # Update slider value too
-                st.session_state[f"slider_{key}"] = new_value
-
+                # Rerun so the slider receives the new value
                 st.rerun()
 
     except ValueError:
+
         pass
 
-    return st.session_state[key]
+
+    # ------------------------------------------------------
+    # Return the latest value
+    # ------------------------------------------------------
+
+    return int(st.session_state[key])
 
 
 # ==========================================================
-# Loan-related inputs
+# Loan-related Inputs
 # ==========================================================
 
 no_of_dep = slider_with_text(
@@ -191,6 +241,10 @@ no_of_dep = slider_with_text(
 )
 
 
+# ==========================================================
+# Education
+# ==========================================================
+
 grad = st.radio(
     "Education",
     ["Graduated", "Not Graduated"],
@@ -198,12 +252,20 @@ grad = st.radio(
 )
 
 
+# ==========================================================
+# Self Employed
+# ==========================================================
+
 self_emp = st.radio(
     "Self Employed",
     ["Yes", "No"],
     horizontal=True
 )
 
+
+# ==========================================================
+# Loan Amount
+# ==========================================================
 
 Loan_Amount = slider_with_text(
     "Loan Amount",
@@ -216,6 +278,10 @@ Loan_Amount = slider_with_text(
 )
 
 
+# ==========================================================
+# Annual Income
+# ==========================================================
+
 Annual_Income = slider_with_text(
     "Annual Income",
     10000,
@@ -226,6 +292,10 @@ Annual_Income = slider_with_text(
     "₹"
 )
 
+
+# ==========================================================
+# Loan Duration
+# ==========================================================
 
 Loan_Dur = slider_with_text(
     "Loan Duration (Years)",
@@ -238,6 +308,10 @@ Loan_Dur = slider_with_text(
 )
 
 
+# ==========================================================
+# CIBIL Score
+# ==========================================================
+
 Cibil = slider_with_text(
     "Cibil Score",
     300,
@@ -247,6 +321,10 @@ Cibil = slider_with_text(
     "Cibil"
 )
 
+
+# ==========================================================
+# Assets
+# ==========================================================
 
 Assets = slider_with_text(
     "Assets Value",
@@ -275,19 +353,30 @@ emp_s = 0 if self_emp == "No" else 1
 if st.button("Predict"):
 
     # ------------------------------------------------------
-    # IMPORTANT:
-    # Save the CURRENT values before prediction
+    # Make sure the latest values are stored
     # ------------------------------------------------------
 
-    st.session_state["loan_amount"] = int(Loan_Amount)
+    Loan_Amount = int(Loan_Amount)
+    Annual_Income = int(Annual_Income)
+    Loan_Dur = int(Loan_Dur)
+    Cibil = int(Cibil)
+    Assets = int(Assets)
+    no_of_dep = int(no_of_dep)
 
-    st.session_state["annual_income"] = int(Annual_Income)
 
-    st.session_state["loan_duration"] = int(Loan_Dur)
+    # ------------------------------------------------------
+    # Store input values
+    # ------------------------------------------------------
 
-    st.session_state["cibil_score"] = int(Cibil)
+    st.session_state["loan_amount"] = Loan_Amount
 
-    st.session_state["assets"] = int(Assets)
+    st.session_state["annual_income"] = Annual_Income
+
+    st.session_state["loan_duration"] = Loan_Dur
+
+    st.session_state["cibil_score"] = Cibil
+
+    st.session_state["assets"] = Assets
 
 
     # ------------------------------------------------------
@@ -314,11 +403,15 @@ if st.button("Predict"):
 
 
     # ------------------------------------------------------
-    # Go to results page
+    # Go to Results page
     # ------------------------------------------------------
 
     st.switch_page("pages/results.py")
 
+
+# ==========================================================
+# Close container
+# ==========================================================
 
 st.markdown(
     "</div>",

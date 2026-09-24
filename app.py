@@ -5,16 +5,12 @@ from predict import predict_loan
 
 
 # ==========================================================
-# Initialize session state for theme mode
+# THEME
 # ==========================================================
 
 if "theme" not in st.session_state:
     st.session_state["theme"] = "light"
 
-
-# ==========================================================
-# Function to toggle theme
-# ==========================================================
 
 def toggle_theme():
     if st.session_state["theme"] == "light":
@@ -23,31 +19,20 @@ def toggle_theme():
         st.session_state["theme"] = "light"
 
 
-# ==========================================================
-# Define Styles for Light and Dark Mode
-# ==========================================================
-
 if st.session_state["theme"] == "light":
-
     bg_color = "#FFFFFF"
     text_color = "#000000"
     button_bg = "#007BFF"
-    switch_bg = "#DDD"
-    switch_circle = "#FFF"
     switch_icon = "🌞"
-
 else:
-
     bg_color = "#000000"
     text_color = "#FFFFFF"
     button_bg = "#1E90FF"
-    switch_bg = "#007BFF"
-    switch_circle = "#FFF"
     switch_icon = "🌙"
 
 
 # ==========================================================
-# Custom CSS
+# CSS
 # ==========================================================
 
 st.markdown(
@@ -71,7 +56,7 @@ st.markdown(
             color: {text_color} !important;
         }}
 
-        .stButton>button {{
+        .stButton > button {{
             background-color: {button_bg};
             color: white;
             border-radius: 10px;
@@ -87,32 +72,29 @@ st.markdown(
 
 
 # ==========================================================
-# Header
+# HEADER
 # ==========================================================
 
 col1, col2 = st.columns([6, 1])
 
-
 with col1:
     st.title("🏦 Loan Prediction App")
-
 
 with col2:
 
     toggle_state = st.checkbox(
         switch_icon,
-        value=(st.session_state["theme"] == "dark")
+        value=(st.session_state["theme"] == "dark"),
+        key="theme_checkbox"
     )
 
-
-if toggle_state != (st.session_state["theme"] == "dark"):
-
-    toggle_theme()
-    st.rerun()
+    if toggle_state != (st.session_state["theme"] == "dark"):
+        toggle_theme()
+        st.rerun()
 
 
 # ==========================================================
-# Main container
+# MAIN CONTAINER
 # ==========================================================
 
 st.markdown(
@@ -126,8 +108,22 @@ st.markdown(
 
 
 # ==========================================================
-# Slider + Text Input Function
+# SYNCHRONIZED SLIDER + NUMBER INPUT
 # ==========================================================
+
+def sync_slider_to_input(key):
+    """
+    When slider changes, update the number input.
+    """
+    st.session_state[f"{key}_input"] = st.session_state[key]
+
+
+def sync_input_to_slider(key):
+    """
+    When number input changes, update the slider.
+    """
+    st.session_state[key] = st.session_state[f"{key}_input"]
+
 
 def slider_with_text(
     label,
@@ -139,96 +135,71 @@ def slider_with_text(
     suffix=""
 ):
 
-    col1, col2 = st.columns([3, 1])
-
     # ------------------------------------------------------
-    # Initialize session state
+    # Initialize values
     # ------------------------------------------------------
 
     if key not in st.session_state:
         st.session_state[key] = min_val
 
+    input_key = f"{key}_input"
+
+    if input_key not in st.session_state:
+        st.session_state[input_key] = min_val
+
+
+    # ------------------------------------------------------
+    # Create columns
+    # ------------------------------------------------------
+
+    col1, col2 = st.columns([3, 1])
+
 
     # ------------------------------------------------------
     # Slider
-    #
-    # IMPORTANT:
-    # We do NOT give the slider a manual session-state key.
-    # This prevents StreamlitWidgetAlreadyInstantiatedError.
     # ------------------------------------------------------
 
-    slider_value = col1.slider(
-        label,
-        min_value=min_val,
-        max_value=max_val,
-        value=int(st.session_state[key]),
-        step=step,
-        format=format_str
-    )
+    with col1:
 
-
-    # ------------------------------------------------------
-    # IMPORTANT:
-    # Save the CURRENT slider value
-    # ------------------------------------------------------
-
-    st.session_state[key] = int(slider_value)
+        st.slider(
+            label,
+            min_value=min_val,
+            max_value=max_val,
+            step=step,
+            format=format_str,
+            key=key,
+            on_change=sync_slider_to_input,
+            args=(key,)
+        )
 
 
     # ------------------------------------------------------
-    # Text input
+    # Number input
     # ------------------------------------------------------
 
-    text_value = col2.text_input(
-        "",
-        value=str(st.session_state[key])
-    )
+    with col2:
 
-
-    # ------------------------------------------------------
-    # Clean text input
-    # ------------------------------------------------------
-
-    cleaned_value = (
-        text_value
-        .replace("₹", "")
-        .replace(",", "")
-        .replace(suffix, "")
-        .strip()
-    )
+        st.number_input(
+            label,
+            min_value=min_val,
+            max_value=max_val,
+            step=step,
+            key=input_key,
+            label_visibility="collapsed",
+            on_change=sync_input_to_slider,
+            args=(key,)
+        )
 
 
     # ------------------------------------------------------
-    # Handle manual text input
-    # ------------------------------------------------------
-
-    try:
-
-        new_value = int(cleaned_value)
-
-        if min_val <= new_value <= max_val:
-
-            if new_value != st.session_state[key]:
-
-                st.session_state[key] = new_value
-
-                # Rerun so the slider receives the new value
-                st.rerun()
-
-    except ValueError:
-
-        pass
-
-
-    # ------------------------------------------------------
-    # Return the latest value
+    # Return the current value
     # ------------------------------------------------------
 
     return int(st.session_state[key])
 
 
 # ==========================================================
-# Loan-related Inputs
+# INPUTS
 # ==========================================================
 
 no_of_dep = slider_with_text(
@@ -242,29 +213,31 @@ no_of_dep = slider_with_text(
 
 
 # ==========================================================
-# Education
+# EDUCATION
 # ==========================================================
 
 grad = st.radio(
     "Education",
     ["Graduated", "Not Graduated"],
-    horizontal=True
+    horizontal=True,
+    key="education"
 )
 
 
 # ==========================================================
-# Self Employed
+# SELF EMPLOYED
 # ==========================================================
 
 self_emp = st.radio(
     "Self Employed",
     ["Yes", "No"],
-    horizontal=True
+    horizontal=True,
+    key="self_employed"
 )
 
 
 # ==========================================================
-# Loan Amount
+# LOAN AMOUNT
 # ==========================================================
 
 Loan_Amount = slider_with_text(
@@ -279,7 +252,7 @@ Loan_Amount = slider_with_text(
 
 
 # ==========================================================
-# Annual Income
+# ANNUAL INCOME
 # ==========================================================
 
 Annual_Income = slider_with_text(
@@ -294,7 +267,7 @@ Annual_Income = slider_with_text(
 
 
 # ==========================================================
-# Loan Duration
+# LOAN DURATION
 # ==========================================================
 
 Loan_Dur = slider_with_text(
@@ -309,7 +282,7 @@ Loan_Dur = slider_with_text(
 
 
 # ==========================================================
-# CIBIL Score
+# CIBIL SCORE
 # ==========================================================
 
 Cibil = slider_with_text(
@@ -323,7 +296,7 @@ Cibil = slider_with_text(
 
 
 # ==========================================================
-# Assets
+# ASSETS
 # ==========================================================
 
 Assets = slider_with_text(
@@ -338,7 +311,7 @@ Assets = slider_with_text(
 
 
 # ==========================================================
-# Convert categorical values
+# CONVERT CATEGORICAL VALUES
 # ==========================================================
 
 grad_s = 0 if grad == "Graduated" else 1
@@ -347,25 +320,25 @@ emp_s = 0 if self_emp == "No" else 1
 
 
 # ==========================================================
-# Predict Button
+# PREDICT BUTTON
 # ==========================================================
 
 if st.button("Predict"):
 
     # ------------------------------------------------------
-    # Make sure the latest values are stored
+    # Get FINAL values
     # ------------------------------------------------------
 
-    Loan_Amount = int(Loan_Amount)
-    Annual_Income = int(Annual_Income)
-    Loan_Dur = int(Loan_Dur)
-    Cibil = int(Cibil)
-    Assets = int(Assets)
-    no_of_dep = int(no_of_dep)
+    no_of_dep = int(st.session_state["no_of_dep"])
+    Loan_Amount = int(st.session_state["Loan_Amount"])
+    Annual_Income = int(st.session_state["Annual_Income"])
+    Loan_Dur = int(st.session_state["Loan_Dur"])
+    Cibil = int(st.session_state["Cibil"])
+    Assets = int(st.session_state["Assets"])
 
 
     # ------------------------------------------------------
-    # Store input values
+    # Store values for results page
     # ------------------------------------------------------
 
     st.session_state["loan_amount"] = Loan_Amount
@@ -380,7 +353,7 @@ if st.button("Predict"):
 
 
     # ------------------------------------------------------
-    # Run prediction
+    # Prediction
     # ------------------------------------------------------
 
     result_text = predict_loan(
@@ -403,14 +376,14 @@ if st.button("Predict"):
 
 
     # ------------------------------------------------------
-    # Go to Results page
+    # Go to results page
     # ------------------------------------------------------
 
     st.switch_page("pages/results.py")
 
 
 # ==========================================================
-# Close container
+# CLOSE CONTAINER
 # ==========================================================
 
 st.markdown(

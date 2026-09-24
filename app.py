@@ -1,39 +1,30 @@
 import streamlit as st
 import pandas as pd
+import webbrowser
 from predict import predict_loan
 
 
-# -----------------------------------
-# Initialize theme
-# -----------------------------------
+# Initialize session state for theme mode
 if "theme" not in st.session_state:
     st.session_state["theme"] = "light"
 
 
-# -----------------------------------
-# Toggle theme
-# -----------------------------------
+# Function to toggle theme
 def toggle_theme():
-    if st.session_state["theme"] == "light":
-        st.session_state["theme"] = "dark"
-    else:
-        st.session_state["theme"] = "light"
+    st.session_state["theme"] = (
+        "dark" if st.session_state["theme"] == "light" else "light"
+    )
 
 
-# -----------------------------------
-# Theme colors
-# -----------------------------------
+# Define Styles for Light and Dark Mode
 if st.session_state["theme"] == "light":
-
     bg_color = "#FFFFFF"
     text_color = "#000000"
     button_bg = "#007BFF"
     switch_bg = "#DDD"
     switch_circle = "#FFF"
     switch_icon = "🌞"
-
 else:
-
     bg_color = "#000000"
     text_color = "#FFFFFF"
     button_bg = "#1E90FF"
@@ -42,63 +33,57 @@ else:
     switch_icon = "🌙"
 
 
-# -----------------------------------
-# Custom CSS
-# -----------------------------------
+# CSS
 st.markdown(
     f"""
     <style>
+        .stApp {{
+            background-color: {bg_color};
+        }}
 
-    .stApp {{
-        background-color: {bg_color};
-    }}
+        .container {{
+            text-align: center;
+            padding: 30px;
+            background-color: {bg_color};
+            border-radius: 15px;
+            width: 50%;
+            color: {text_color};
+        }}
 
-    .container {{
-        text-align: center;
-        padding: 30px;
-        background-color: {bg_color};
-        border-radius: 15px;
-        width: 50%;
-        color: {text_color};
-    }}
+        h1, h2, h3, h4, h5, h6, p, label {{
+            color: {text_color} !important;
+        }}
 
-    h1, h2, h3, h4, h5, h6, p, label {{
-        color: {text_color} !important;
-    }}
-
-    .stButton > button {{
-        background-color: {button_bg};
-        color: white;
-        border-radius: 10px;
-        padding: 10px;
-        font-size: 18px;
-        width: 100%;
-    }}
-
+        .stButton>button {{
+            background-color: {button_bg};
+            color: white;
+            border-radius: 10px;
+            padding: 10px;
+            font-size: 18px;
+            width: 100%;
+        }}
     </style>
     """,
     unsafe_allow_html=True
 )
 
 
-# -----------------------------------
 # Header
-# -----------------------------------
 col1, col2 = st.columns([6, 1])
 
 with col1:
     st.title("🏦 Loan Prediction App")
 
 with col2:
-
     toggle_state = st.checkbox(
         switch_icon,
         value=(st.session_state["theme"] == "dark")
     )
 
-    if toggle_state != (st.session_state["theme"] == "dark"):
-        toggle_theme()
-        st.rerun()
+
+if toggle_state != (st.session_state["theme"] == "dark"):
+    toggle_theme()
+    st.rerun()
 
 
 st.markdown(
@@ -111,9 +96,10 @@ st.markdown(
 )
 
 
-# -----------------------------------
-# Slider + Text Input Function
-# -----------------------------------
+# ==========================================================
+# Function for synchronized slider & text input
+# ==========================================================
+
 def slider_with_text(
     label,
     min_val,
@@ -126,13 +112,14 @@ def slider_with_text(
 
     col1, col2 = st.columns([3, 1])
 
-    # Initialize session state
+    # Initialize value
     if key not in st.session_state:
         st.session_state[key] = min_val
 
-    # --------------------------------
+    # ------------------------------------------------------
     # Slider
-    # --------------------------------
+    # ------------------------------------------------------
+
     slider_value = col1.slider(
         label,
         min_val,
@@ -143,23 +130,24 @@ def slider_with_text(
         key=f"slider_{key}"
     )
 
-    # IMPORTANT:
-    # Always save the current slider value
-    # into session state.
+    # IMPORTANT FIX:
+    # Save the current slider value into session state
     st.session_state[key] = slider_value
 
-    # --------------------------------
+    # ------------------------------------------------------
     # Text input
-    # --------------------------------
+    # ------------------------------------------------------
+
     text_value = col2.text_input(
         "",
-        value=str(slider_value),
+        value=str(st.session_state[key]),
         key=f"text_{key}"
     )
 
-    # --------------------------------
-    # Handle manual text input
-    # --------------------------------
+    # ------------------------------------------------------
+    # Handle text input
+    # ------------------------------------------------------
+
     cleaned_value = (
         text_value
         .replace("₹", "")
@@ -172,17 +160,16 @@ def slider_with_text(
 
         new_value = int(cleaned_value)
 
-        if (
-            min_val <= new_value <= max_val
-            and new_value != st.session_state[key]
-        ):
+        if min_val <= new_value <= max_val:
 
-            st.session_state[key] = new_value
+            if new_value != st.session_state[key]:
 
-            # Update slider state
-            st.session_state[f"slider_{key}"] = new_value
+                st.session_state[key] = new_value
 
-            st.rerun()
+                # Update slider value too
+                st.session_state[f"slider_{key}"] = new_value
+
+                st.rerun()
 
     except ValueError:
         pass
@@ -190,9 +177,9 @@ def slider_with_text(
     return st.session_state[key]
 
 
-# -----------------------------------
-# Loan Inputs
-# -----------------------------------
+# ==========================================================
+# Loan-related inputs
+# ==========================================================
 
 no_of_dep = slider_with_text(
     "No of Dependents",
@@ -272,23 +259,25 @@ Assets = slider_with_text(
 )
 
 
-# -----------------------------------
+# ==========================================================
 # Convert categorical values
-# -----------------------------------
+# ==========================================================
 
 grad_s = 0 if grad == "Graduated" else 1
 
 emp_s = 0 if self_emp == "No" else 1
 
 
-# -----------------------------------
+# ==========================================================
 # Predict Button
-# -----------------------------------
+# ==========================================================
 
 if st.button("Predict"):
 
-    # Make absolutely sure the latest
-    # values are stored before prediction.
+    # ------------------------------------------------------
+    # IMPORTANT:
+    # Save the CURRENT values before prediction
+    # ------------------------------------------------------
 
     st.session_state["loan_amount"] = int(Loan_Amount)
 
@@ -301,7 +290,10 @@ if st.button("Predict"):
     st.session_state["assets"] = int(Assets)
 
 
+    # ------------------------------------------------------
     # Run prediction
+    # ------------------------------------------------------
+
     result_text = predict_loan(
         no_of_dep,
         grad_s,
@@ -314,26 +306,17 @@ if st.button("Predict"):
     )
 
 
+    # ------------------------------------------------------
     # Store prediction result
+    # ------------------------------------------------------
+
     st.session_state["loan_status"] = result_text
 
 
-    # --------------------------------
-    # Debug information
-    # --------------------------------
-    # You can remove these later.
-    # They help confirm the values.
-
-    st.session_state["loan_amount"] = int(Loan_Amount)
-    st.session_state["annual_income"] = int(Annual_Income)
-    st.session_state["loan_duration"] = int(Loan_Dur)
-    st.session_state["cibil_score"] = int(Cibil)
-    st.session_state["assets"] = int(Assets)
-
-
-    # --------------------------------
+    # ------------------------------------------------------
     # Go to results page
-    # --------------------------------
+    # ------------------------------------------------------
+
     st.switch_page("pages/results.py")
 
 
